@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "daily-screenshot"
+version = "0.1.0"
+description = ""
+authors = ["Josh Kremer <joshkremer@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+selenium = "^4.27.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
