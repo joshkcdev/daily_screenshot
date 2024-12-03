@@ -1,7 +1,13 @@
 import requests
+import os
 from datetime import datetime
 
 current_datetime = datetime.now().strftime('%Y-%m-%d_%I-%M-%S_%p')
+
+def ensure_directory_exists(directory: str):
+    """Creates the directory if it does not exist."""
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 def download_image(url: str, save_path: str):
     try:
@@ -15,7 +21,8 @@ def download_image(url: str, save_path: str):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
 
-
+screenshot_dir = "screenshots"
+ensure_directory_exists(screenshot_dir)
 screenshot_url = "https://weather.gc.ca/en/location/index.html?coords=48.779,-123.702"
 request_url = f"https://image.thum.io/get/auth/72878-weather_daily/fullpage/width/1200{screenshot_url}"
 filename = f"screenshots/screenshot_{current_datetime}.png"
