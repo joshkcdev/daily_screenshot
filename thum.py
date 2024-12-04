@@ -21,7 +21,7 @@ def download_image(url: str, save_path: str):
     except requests.exceptions.RequestException as e:
         print(f"An error occurred: {e}")
 
-screenshot_dir = "screenshots"
+screenshot_dir = "~/workspace/screenshots"
 ensure_directory_exists(screenshot_dir)
 screenshot_url = "https://weather.gc.ca/en/location/index.html?coords=48.779,-123.702"
 request_url = f"https://image.thum.io/get/auth/72878-weather_daily/fullpage/width/1200{screenshot_url}"
