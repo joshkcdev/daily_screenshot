@@ -35,21 +35,6 @@ def upload_to_google_drive(file_path: str, filename: str, folder_id: str):
     )
     drive_service = build("drive", "v3", credentials=credentials)
 
-    # Verify folder access
-    try:
-        folder = (
-            drive_service.files()
-            .get(fileId=folder_id, supportsAllDrives=True, fields="id,name,driveId")
-            .execute()
-        )
-        print(f"Folder found: {folder}")
-    except Exception as e:
-        print(f"Cannot access folder {folder_id}: {e}")
-        # List available shared drives for debugging
-        drives = drive_service.drives().list().execute()
-        print(f"Available shared drives: {drives.get('drives', [])}")
-        raise
-
     file_metadata = {"name": filename, "parents": [folder_id]}
     media = MediaFileUpload(file_path, mimetype="image/png")
     file = (
