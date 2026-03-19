@@ -1,0 +1,14 @@
+services:
+  - type: cron
+    name: daily-screenshot
+    runtime: python
+    schedule: "0 14 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python thum.py
+    envVars:
+      - key: THUM_AUTH
+        sync: false
+      - key: GOOGLE_DRIVE_FOLDER_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
