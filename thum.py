@@ -8,7 +8,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 THUM_AUTH = os.environ["THUM_AUTH"]
 GOOGLE_DRIVE_FOLDER_ID = os.environ["GOOGLE_DRIVE_FOLDER_ID"]
@@ -39,7 +39,12 @@ def upload_to_google_drive(file_path: str, filename: str, folder_id: str):
     media = MediaFileUpload(file_path, mimetype="image/png")
     file = (
         drive_service.files()
-        .create(body=file_metadata, media_body=media, fields="id")
+        .create(
+            body=file_metadata,
+            media_body=media,
+            fields="id",
+            supportsAllDrives=True,
+        )
         .execute()
     )
     print(f"Uploaded to Google Drive with file ID: {file.get('id')}")
