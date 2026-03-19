@@ -1,6 +1,5 @@
 import json
 import os
-import base64
 import tempfile
 from datetime import datetime
 
@@ -30,7 +29,7 @@ def take_screenshot(url: str, save_path: str):
 
 def upload_to_google_drive(file_path: str, filename: str, folder_id: str):
     """Upload a file to a Google Drive folder using a service account."""
-    creds_json = json.loads(base64.b64decode(GOOGLE_SERVICE_ACCOUNT_JSON))
+    creds_json = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
     credentials = service_account.Credentials.from_service_account_info(
         creds_json, scopes=SCOPES
     )
