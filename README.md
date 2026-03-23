@@ -4,7 +4,7 @@ Takes a daily screenshot of the [Canadian weather page](https://weather.gc.ca/en
 
 ## How it works
 
-1. Render cron job triggers daily at 6am
+1. Render cron job triggers daily at 4pm PDT (23:00 UTC)
 2. [thum.io](https://thum.io) captures a full-page screenshot
 3. Screenshot is uploaded to Google Drive via a service account
 
