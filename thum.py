@@ -51,7 +51,7 @@ def upload_to_google_drive(file_path: str, filename: str, folder_id: str):
 
 
 def main():
-    current_date = datetime.now().strftime("%Y_%m_%d")
+    current_date = datetime.now().strftime("%b_%-d_%Y")
     filename = f"weather_daily_{current_date}.png"
 
     with tempfile.TemporaryDirectory() as tmpdir:
