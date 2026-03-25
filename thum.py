@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+import time
 from datetime import datetime
 
 import requests
@@ -19,7 +20,8 @@ SCREENSHOT_URL = "https://weather.gc.ca/en/location/index.html?coords=48.779,-12
 
 def take_screenshot(url: str, save_path: str):
     """Download a full-page screenshot from thum.io."""
-    request_url = f"https://image.thum.io/get/auth/{THUM_AUTH}/fullpage/width/1200/{url}"
+    nonce = int(time.time())
+    request_url = f"https://image.thum.io/get/auth/{THUM_AUTH}/fullpage/width/1200/nonce/{nonce}/{url}"
     response = requests.get(request_url)
     response.raise_for_status()
     with open(save_path, "wb") as f:
