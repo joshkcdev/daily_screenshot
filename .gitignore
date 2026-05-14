@@ -1,5 +1,8 @@
 /.idea
 /.DS_Store
 /raspi_screenshots
+/drive_screenshots
+.env
+__pycache__/
 daily-screenshot-443720-*.json
 base64_key.txt

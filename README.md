@@ -40,3 +40,37 @@ python sync_raspi_screenshots.py --dry-run  # preview without copying
 ```
 
 Prerequisite: a `~/.ssh/config` alias for the Pi (default: `raspi4`). Override with `--host`/`--remote-dir` flags or `RPI_SSH_HOST`/`RPI_REMOTE_DIR` env vars. The sync is incremental and never deletes local files.
+
+## Drive download (for comparison)
+
+To pull every screenshot the Render app has uploaded to Google Drive into `./drive_screenshots/`:
+
+```bash
+python download_drive_screenshots.py             # download everything (skips files already local)
+python download_drive_screenshots.py --dry-run   # list what would be downloaded
+```
+
+Prerequisites:
+
+- `GOOGLE_DRIVE_FOLDER_ID` set, either via your shell or via a `.env` file in the repo root (copy `.env.example` to `.env` and fill it in — `.env` is gitignored).
+- The service-account JSON sitting in the repo root (filename matches `daily-screenshot-443720-*.json`). Both are gitignored.
+
+Use this alongside `sync_raspi_screenshots.py` to compare the Render uploads against the raspi4's local backups.
+
+## Cache-coherence check
+
+thum.io occasionally serves a stale cached snapshot where the "Last updated" timestamp in the top-right of the page disagrees with the first column of the forecast calendar. To scan the most recent screenshots in both directories for this:
+
+```bash
+poetry run python check_cache_coherence.py            # last 30 in each dir
+poetry run python check_cache_coherence.py --count 5  # quick spot-check
+```
+
+Prerequisite: `brew install tesseract` (the script uses local Tesseract OCR).
+
+Per row the script emits the filename's date, the "Last updated" date extracted from the image, the leftmost calendar-column date, and a status:
+
+- ✅ — all dates agree (page was fresh)
+- ⚠️ stale-but-coherent — image is internally consistent but its date predates the filename's capture date (thum served a fully-cached old page)
+- ❌ MISMATCH — "Last updated" disagrees with the calendar header (partial cache, the bug being hunted)
+- ❓ OCR_FAILED — at least one region couldn't be parsed
