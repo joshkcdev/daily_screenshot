@@ -6,9 +6,13 @@ A daily screenshot of the [Canadian weather page](https://weather.gc.ca/en/locat
 
 ## How it works
 
-1. A Render cron job runs a Python script daily
-2. The script uses [thum.io](https://thum.io) to capture a full-page screenshot of the weather page
-3. The screenshot is uploaded to Google Drive using a Google service account
+1. A Render cron job runs `thum.py` daily.
+2. The script uses [thum.io](https://thum.io) to capture a full-page screenshot of the weather page.
+3. The screenshot is uploaded to Google Drive using a Google service account.
+
+### Cache-busting
+
+thum.io keys its render cache off the *source* URL we pass it, not the full thum.io request URL. To force a fresh render every run, `thum.py` appends a unique `?_=<unix_ts>` query param to the inner Environment Canada URL. Earlier `nonce/<ts>/` path segments were ignored by thum.io's cache layer (verified with `diagnose_cache.py`). Don't remove the inner-URL cache-bust — it's the thing that actually works.
 
 ## If something breaks
 
@@ -57,30 +61,28 @@ Prerequisites:
 
 Use this alongside `sync_raspi_screenshots.py` to compare the Render uploads against the raspi4's local backups.
 
-## Cache-coherence check
+## If the cache problem comes back
 
-thum.io occasionally serves a stale cached snapshot where the "Last updated" timestamp in the top-right of the page disagrees with the first column of the forecast calendar. To scan the most recent screenshots in both directories for this:
+Historically, thum.io served snapshots that lagged the live page by days to weeks. The cache-busting in `thum.py` (see above) fixes this — but if you ever notice old screenshots appearing again, two tools are here to investigate.
+
+### `diagnose_cache.py` — is it thum.io or upstream?
+
+```bash
+poetry run python diagnose_cache.py
+```
+
+Fetches the EC weather page's raw HTML and a fresh thum.io capture at the same instant, then compares "Last updated" from each. Tells you whether the staleness lives at thum.io or at Environment Canada — a different fix path for each. Requires `THUM_AUTH` in `.env`.
+
+### `check_cache_coherence.py` — scan historical captures
 
 ```bash
 poetry run python check_cache_coherence.py            # last 30 in each dir
 poetry run python check_cache_coherence.py --count 5  # quick spot-check
 ```
 
-Prerequisite: `brew install tesseract` (the script uses local Tesseract OCR).
+Uses local Tesseract OCR (`brew install tesseract`) to extract the "Last updated" date and the leftmost forecast-calendar date from each image in `./raspi_screenshots/` and `./drive_screenshots/`. Status per row:
 
-Per row the script emits the filename's date, the "Last updated" date extracted from the image, the leftmost calendar-column date, and a status:
-
-- ✅ — all dates agree (page was fresh)
-- ⚠️ stale-but-coherent — image is internally consistent but its date predates the filename's capture date (thum served a fully-cached old page)
-- ❌ MISMATCH — "Last updated" disagrees with the calendar header (partial cache, the bug being hunted)
-- ❓ OCR_FAILED — at least one region couldn't be parsed
-
-## Diagnosing the cache
-
-To find out whether stale captures are caused by thum.io's cache or by Environment Canada's upstream cache, run:
-
-```bash
-poetry run python diagnose_cache.py
-```
-
-The script fetches the EC weather page's raw HTML and a fresh thum.io capture at the same moment, extracts "Last updated" from each, and tells you which side is stale. Requires `THUM_AUTH` in `.env` or the shell.
+- ✅ — all dates agree
+- ⚠️ stale-but-coherent — image is internally consistent but its date predates the filename
+- ❌ MISMATCH — "Last updated" disagrees with the calendar header (partial cache)
+- ❓ OCR_FAILED — region couldn't be parsed
