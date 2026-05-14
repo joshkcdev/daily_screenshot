@@ -74,3 +74,13 @@ Per row the script emits the filename's date, the "Last updated" date extracted 
 - ⚠️ stale-but-coherent — image is internally consistent but its date predates the filename's capture date (thum served a fully-cached old page)
 - ❌ MISMATCH — "Last updated" disagrees with the calendar header (partial cache, the bug being hunted)
 - ❓ OCR_FAILED — at least one region couldn't be parsed
+
+## Diagnosing the cache
+
+To find out whether stale captures are caused by thum.io's cache or by Environment Canada's upstream cache, run:
+
+```bash
+poetry run python diagnose_cache.py
+```
+
+The script fetches the EC weather page's raw HTML and a fresh thum.io capture at the same moment, extracts "Last updated" from each, and tells you which side is stale. Requires `THUM_AUTH` in `.env` or the shell.
