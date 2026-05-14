@@ -63,7 +63,16 @@ Use this alongside `sync_raspi_screenshots.py` to compare the Render uploads aga
 
 ## If the cache problem comes back
 
-Historically, thum.io served snapshots that lagged the live page by days to weeks. The cache-busting in `thum.py` (see above) fixes this — but if you ever notice old screenshots appearing again, two tools are here to investigate.
+Historically, thum.io served snapshots that lagged the live page by days to weeks. The cache-busting in `thum.py` (see above) fixes this — three tools are here for ongoing verification and investigation.
+
+### `verify_latest_drive.py` — daily spot-check
+
+```bash
+poetry run python verify_latest_drive.py            # check the latest upload
+poetry run python verify_latest_drive.py --count 3  # check the latest 3
+```
+
+Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and compares it to the upload date. ✅ if within 1 day (normal — EC's last forecast issuance can be the prior evening), ❌ if more (the cache bug is back). Exits non-zero on staleness so it can be wired into notifications.
 
 ### `diagnose_cache.py` — is it thum.io or upstream?
 
