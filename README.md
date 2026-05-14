@@ -29,3 +29,14 @@ The service account must be shared as an Editor/Content Manager on the target Sh
 ## Deployment
 
 Deployed as a [Render cron job](https://render.com). Pushes to `main` trigger automatic redeployment.
+
+## Backup: raspi4
+
+A parallel instance runs on a Raspberry Pi 4 and saves PNGs to `~/workspace/daily_screenshot/screenshots` on the Pi. To pull those screenshots down for local comparison:
+
+```bash
+python sync_raspi_screenshots.py            # rsync over SSH into ./raspi_screenshots/
+python sync_raspi_screenshots.py --dry-run  # preview without copying
+```
+
+Prerequisite: a `~/.ssh/config` alias for the Pi (default: `raspi4`). Override with `--host`/`--remote-dir` flags or `RPI_SSH_HOST`/`RPI_REMOTE_DIR` env vars. The sync is incremental and never deletes local files.
