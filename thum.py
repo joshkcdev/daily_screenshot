@@ -20,8 +20,13 @@ SCREENSHOT_URL = "https://weather.gc.ca/en/location/index.html?coords=48.779,-12
 
 def take_screenshot(url: str, save_path: str):
     """Download a full-page screenshot from thum.io."""
-    nonce = int(time.time())
-    request_url = f"https://image.thum.io/get/auth/{THUM_AUTH}/fullpage/width/1200/nonce/{nonce}/{url}"
+    # thum.io keys its cache off the inner source URL, so appending a unique
+    # query param to the EC URL makes each request look like a new URL and
+    # forces a fresh render. The `nonce/<ts>/` segment we tried previously
+    # did not bust their cache — confirmed via diagnose_cache.py.
+    sep = "&" if "?" in url else "?"
+    busted_url = f"{url}{sep}_={int(time.time())}"
+    request_url = f"https://image.thum.io/get/auth/{THUM_AUTH}/fullpage/width/1200/{busted_url}"
     response = requests.get(request_url)
     response.raise_for_status()
     with open(save_path, "wb") as f:
