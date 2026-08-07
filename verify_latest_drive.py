@@ -26,7 +26,9 @@ from PIL import Image
 
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+SECRETS_DIR = Path.home() / ".secret" / "island-utility"
 KEY_GLOB = "daily-screenshot-443720-*.json"
+ENV_FILE = SECRETS_DIR / "daily-screenshot.env"
 
 WEEKDAYS = "Mon|Tue|Wed|Thu|Fri|Sat|Sun"
 MONTHS = "Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
@@ -57,10 +59,10 @@ def load_dotenv(path: Path) -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def resolve_key_file(repo_root: Path) -> Path:
-    matches = sorted(repo_root.glob(KEY_GLOB))
+def resolve_key_file() -> Path:
+    matches = sorted(SECRETS_DIR.glob(KEY_GLOB))
     if not matches:
-        raise FileNotFoundError(f"No service-account key matching {KEY_GLOB}")
+        raise FileNotFoundError(f"No service-account key matching {SECRETS_DIR / KEY_GLOB}")
     return matches[-1]
 
 
@@ -99,8 +101,7 @@ def fmt_date(d: date | None) -> str:
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parent
-    load_dotenv(repo_root / ".env")
+    load_dotenv(ENV_FILE)
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--count", type=int, default=1, help="Files to check (default: 1)")
@@ -109,11 +110,11 @@ def main() -> int:
 
     folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
     if not folder_id:
-        print("⚠️  GOOGLE_DRIVE_FOLDER_ID not set. Put it in .env or export it.")
+        print(f"⚠️  GOOGLE_DRIVE_FOLDER_ID not set. Put it in {ENV_FILE} or export it.")
         return 2
 
     try:
-        key_file = resolve_key_file(repo_root)
+        key_file = resolve_key_file()
     except FileNotFoundError as e:
         print(f"⚠️  {e}")
         return 2

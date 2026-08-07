@@ -90,12 +90,12 @@ def fetch_thumio(thum_auth: str) -> Path:
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parent
-    load_dotenv(repo_root / ".env")
+    env_file = Path.home() / ".secret" / "island-utility" / "daily-screenshot.env"
+    load_dotenv(env_file)
 
     thum_auth = os.environ.get("THUM_AUTH")
     if not thum_auth:
-        print("⚠️  THUM_AUTH not set. Add it to .env or export it.")
+        print(f"⚠️  THUM_AUTH not set. Add it to {env_file} or export it.")
         return 2
 
     now = datetime.now()

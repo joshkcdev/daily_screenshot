@@ -56,8 +56,8 @@ python download_drive_screenshots.py --dry-run   # list what would be downloaded
 
 Prerequisites:
 
-- `GOOGLE_DRIVE_FOLDER_ID` set, either via your shell or via a `.env` file in the repo root (copy `.env.example` to `.env` and fill it in — `.env` is gitignored).
-- The service-account JSON sitting in the repo root (filename matches `daily-screenshot-443720-*.json`). Both are gitignored.
+- `GOOGLE_DRIVE_FOLDER_ID` set, either via your shell or in `~/.secret/island-utility/daily-screenshot.env` (loaded automatically; see `.env.example` for the expected keys).
+- The service-account JSON in `~/.secret/island-utility/` (filename matches `daily-screenshot-443720-*.json`).
 
 Use this alongside `sync_raspi_screenshots.py` to compare the Render uploads against the raspi4's local backups.
 
@@ -80,7 +80,7 @@ Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and co
 poetry run python diagnose_cache.py
 ```
 
-Fetches the EC weather page's raw HTML and a fresh thum.io capture at the same instant, then compares "Last updated" from each. Tells you whether the staleness lives at thum.io or at Environment Canada — a different fix path for each. Requires `THUM_AUTH` in `.env`.
+Fetches the EC weather page's raw HTML and a fresh thum.io capture at the same instant, then compares "Last updated" from each. Tells you whether the staleness lives at thum.io or at Environment Canada — a different fix path for each. Requires `THUM_AUTH` in `~/.secret/island-utility/daily-screenshot.env`.
 
 ### `check_cache_coherence.py` — scan historical captures
 

@@ -19,7 +19,9 @@ from googleapiclient.http import MediaIoBaseDownload
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 DEFAULT_DEST = "drive_screenshots"
+SECRETS_DIR = Path.home() / ".secret" / "island-utility"
 KEY_GLOB = "daily-screenshot-443720-*.json"
+ENV_FILE = SECRETS_DIR / "daily-screenshot.env"
 
 
 def load_dotenv(path: Path) -> None:
@@ -36,17 +38,17 @@ def load_dotenv(path: Path) -> None:
         os.environ.setdefault(key, value)
 
 
-def resolve_key_file(repo_root: Path, override: str | None) -> Path:
+def resolve_key_file(override: str | None) -> Path:
     if override:
         path = Path(override)
         if not path.exists():
             raise FileNotFoundError(f"--key-file not found: {path}")
         return path
 
-    matches = sorted(repo_root.glob(KEY_GLOB))
+    matches = sorted(SECRETS_DIR.glob(KEY_GLOB))
     if not matches:
         raise FileNotFoundError(
-            f"No service-account key found ({KEY_GLOB}). "
+            f"No service-account key found ({SECRETS_DIR / KEY_GLOB}). "
             "Download a fresh key from the GCP service-accounts console — see README."
         )
     if len(matches) > 1:
@@ -119,8 +121,7 @@ def human_size(n: int | None) -> str:
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parent
-    load_dotenv(repo_root / ".env")
+    load_dotenv(ENV_FILE)
 
     parser = argparse.ArgumentParser(
         description="Download all files from a Google Drive folder for local comparison."
@@ -156,7 +157,7 @@ def main() -> int:
         return 2
 
     try:
-        key_file = resolve_key_file(repo_root, args.key_file)
+        key_file = resolve_key_file(args.key_file)
     except FileNotFoundError as e:
         print(f"⚠️  {e}")
         return 2
