@@ -104,6 +104,7 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--count", type=int, default=1, help="Files to check (default: 1)")
+    parser.add_argument("--links", action="store_true", help="Print the Drive web link for each file")
     args = parser.parse_args()
 
     folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
@@ -127,7 +128,7 @@ def main() -> int:
 
     resp = drive.files().list(
         q=f"'{folder_id}' in parents and trashed=false",
-        fields="files(id, name, size, createdTime)",
+        fields="files(id, name, size, createdTime, webViewLink)",
         orderBy="createdTime desc",
         pageSize=args.count,
         supportsAllDrives=True,
@@ -147,6 +148,8 @@ def main() -> int:
         created_dt = datetime.fromisoformat(f["createdTime"].replace("Z", "+00:00"))
         created_date_utc = created_dt.astimezone(timezone.utc).date()
         print(f"   Uploaded:    {created_dt.astimezone().strftime('%a %d %b %Y %H:%M %Z')}")
+        if args.links:
+            print(f"   Link:        {f.get('webViewLink', '—')}")
 
         buf = io.BytesIO()
         request = drive.files().get_media(fileId=f["id"], supportsAllDrives=True)
