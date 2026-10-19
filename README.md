@@ -36,7 +36,9 @@ Deployed as a [Render cron job](https://render.com). Pushes to `main` trigger au
 
 ## Backup: raspi4
 
-A parallel instance runs on a Raspberry Pi 4 and saves PNGs to `~/workspace/daily_screenshot/screenshots` on the Pi. To pull those screenshots down for local comparison:
+A parallel instance runs on a Raspberry Pi 4 and saves PNGs to `~/workspace/daily_screenshot/screenshots` on the Pi. It runs this same `thum.py` with `LOCAL_SAVE_DIR` set, which saves the screenshot there and skips Google Drive (the Drive variables aren't needed). The Pi's cron job (00:00 Pacific) loads `THUM_AUTH` and `LOCAL_SAVE_DIR` from `~/.secret/island-utility/daily-screenshot.env`.
+
+To pull those screenshots down for local comparison:
 
 ```bash
 python sync_raspi_screenshots.py            # rsync over SSH into ./raspi_screenshots/

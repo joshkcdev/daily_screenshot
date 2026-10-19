@@ -12,8 +12,11 @@ from googleapiclient.http import MediaFileUpload
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 THUM_AUTH = os.environ["THUM_AUTH"]
-GOOGLE_DRIVE_FOLDER_ID = os.environ["GOOGLE_DRIVE_FOLDER_ID"]
-GOOGLE_SERVICE_ACCOUNT_JSON = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
+# When set (the raspi4 backup), save screenshots to this directory and skip
+# Google Drive entirely; the Drive variables are then not required.
+LOCAL_SAVE_DIR = os.environ.get("LOCAL_SAVE_DIR")
+GOOGLE_DRIVE_FOLDER_ID = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
+GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
 
 SCREENSHOT_URL = "https://weather.gc.ca/en/location/index.html?coords=48.779,-123.702"
 SCREENSHOT_ATTEMPTS = 3
@@ -80,6 +83,17 @@ def upload_to_google_drive(file_path: str, filename: str, folder_id: str):
 def main():
     current_date = datetime.now().strftime("%b_%-d_%Y")
     filename = f"weather_daily_{current_date}.png"
+
+    if LOCAL_SAVE_DIR:
+        os.makedirs(LOCAL_SAVE_DIR, exist_ok=True)
+        take_screenshot(SCREENSHOT_URL, os.path.join(LOCAL_SAVE_DIR, filename))
+        print("Done.")
+        return
+
+    if not (GOOGLE_DRIVE_FOLDER_ID and GOOGLE_SERVICE_ACCOUNT_JSON):
+        raise RuntimeError(
+            "Set GOOGLE_DRIVE_FOLDER_ID and GOOGLE_SERVICE_ACCOUNT_JSON, or LOCAL_SAVE_DIR"
+        )
 
     with tempfile.TemporaryDirectory() as tmpdir:
         save_path = os.path.join(tmpdir, filename)
