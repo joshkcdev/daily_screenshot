@@ -22,7 +22,7 @@ import pytesseract
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
@@ -152,6 +152,11 @@ def main() -> int:
         if args.links:
             print(f"   Link:        {f.get('webViewLink', '—')}")
 
+        if int(f.get("size", 0)) == 0:
+            print("   Verdict:     ❌ EMPTY — 0-byte file, upload failed")
+            all_fresh = False
+            continue
+
         buf = io.BytesIO()
         request = drive.files().get_media(fileId=f["id"], supportsAllDrives=True)
         downloader = MediaIoBaseDownload(buf, request, chunksize=1024 * 1024)
@@ -160,7 +165,12 @@ def main() -> int:
             _, done = downloader.next_chunk()
         buf.seek(0)
 
-        img = Image.open(buf)
+        try:
+            img = Image.open(buf)
+        except UnidentifiedImageError:
+            print(f"   Verdict:     ❌ NOT_AN_IMAGE — {f.get('size')} bytes, unreadable")
+            all_fresh = False
+            continue
         region = img.crop((0, 0, img.width, min(1000, img.height)))
         text = pytesseract.image_to_string(region)
 
@@ -190,8 +200,8 @@ def main() -> int:
         print("✅ All checked uploads are fresh. Cache-bust is holding.")
         return 0
     else:
-        print("❌ At least one upload is stale. Cache-bust may be regressing —")
-        print("   run `poetry run python diagnose_cache.py` to investigate.")
+        print("❌ At least one upload is stale, empty or unreadable. If STALE, the")
+        print("   cache-bust may be regressing — run `poetry run python diagnose_cache.py`.")
         return 1
 
 
