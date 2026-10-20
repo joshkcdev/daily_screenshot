@@ -8,6 +8,10 @@ For each of the most recent uploads it pulls the file in memory, OCRs the
 top region, and compares the page's "Last updated" date with the upload
 date. A delta of 0-1 day is fine (EC's last forecast issuance can be the
 prior evening); anything bigger means thum.io is caching again.
+
+It also compares each file's Drive md5 with the upload before it. A
+byte-identical copy of the previous day is a thum.io cache hit, even when
+the lag looks fine.
 """
 
 import argparse
@@ -127,16 +131,19 @@ def main() -> int:
     )
     drive = build("drive", "v3", credentials=credentials)
 
+    # Fetch one extra file so the oldest checked upload has a predecessor
+    # for the md5 comparison.
     resp = drive.files().list(
         q=f"'{folder_id}' in parents and trashed=false",
-        fields="files(id, name, size, createdTime, webViewLink)",
+        fields="files(id, name, size, md5Checksum, createdTime, webViewLink)",
         orderBy="createdTime desc",
-        pageSize=args.count,
+        pageSize=args.count + 1,
         supportsAllDrives=True,
         includeItemsFromAllDrives=True,
     ).execute()
 
-    files = resp.get("files", [])
+    listed = resp.get("files", [])
+    files = listed[:args.count]
     if not files:
         print("⚠️  No files found in Drive folder.")
         return 1
@@ -154,6 +161,12 @@ def main() -> int:
 
         if int(f.get("size", 0)) == 0:
             print("   Verdict:     ❌ EMPTY — 0-byte file, upload failed")
+            all_fresh = False
+            continue
+
+        prev = listed[i] if i < len(listed) else None
+        if prev and f.get("md5Checksum") and f.get("md5Checksum") == prev.get("md5Checksum"):
+            print(f"   Verdict:     ❌ DUPLICATE — byte-identical to {prev['name']} (cache hit)")
             all_fresh = False
             continue
 
@@ -200,8 +213,8 @@ def main() -> int:
         print("✅ All checked uploads are fresh. Cache-bust is holding.")
         return 0
     else:
-        print("❌ At least one upload is stale, empty or unreadable. If STALE, the")
-        print("   cache-bust may be regressing — run `poetry run python diagnose_cache.py`.")
+        print("❌ At least one upload is stale, duplicate, empty or unreadable. If STALE or")
+        print("   DUPLICATE, the cache-bust may be regressing — run `poetry run python diagnose_cache.py`.")
         return 1
 
 

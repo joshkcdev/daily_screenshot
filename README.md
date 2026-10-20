@@ -74,7 +74,7 @@ poetry run python verify_latest_drive.py            # check the latest upload
 poetry run python verify_latest_drive.py --count 3  # check the latest 3
 ```
 
-Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and compares it to the upload date. ✅ if within 1 day (normal — EC's last forecast issuance can be the prior evening), ❌ if more (the cache bug is back). Exits non-zero on staleness so it can be wired into notifications.
+Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and compares it to the upload date. ✅ if within 1 day (normal — EC's last forecast issuance can be the prior evening), ❌ if more (the cache bug is back). It also flags ❌ DUPLICATE when a file's Drive md5 matches the upload before it — a byte-identical copy is a cache hit even if the lag looks fine. Exits non-zero on staleness or duplicates so it can be wired into notifications.
 
 ### `diagnose_cache.py` — is it thum.io or upstream?
 
