@@ -6,3 +6,8 @@
 __pycache__/
 daily-screenshot-443720-*.json
 base64_key.txt
+
+# raspi4 working-tree output
+/screenshots
+/cron.log
+/verify.log
