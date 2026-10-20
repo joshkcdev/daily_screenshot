@@ -110,6 +110,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--count", type=int, default=1, help="Files to check (default: 1)")
     parser.add_argument("--links", action="store_true", help="Print the Drive web link for each file")
+    parser.add_argument(
+        "--max-age-hours", type=float,
+        help="Fail if the newest upload is older than this (catches a run that never happened)",
+    )
     args = parser.parse_args()
 
     folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
@@ -149,6 +153,13 @@ def main() -> int:
         return 1
 
     all_fresh = True
+    if args.max_age_hours is not None:
+        newest = datetime.fromisoformat(files[0]["createdTime"].replace("Z", "+00:00"))
+        age_hours = (datetime.now(timezone.utc) - newest).total_seconds() / 3600
+        if age_hours > args.max_age_hours:
+            print(f"❌ MISSING — newest upload is {age_hours:.1f}h old (limit {args.max_age_hours:g}h)")
+            all_fresh = False
+
     for i, f in enumerate(files, 1):
         print()
         print(f"{i}. {f['name']}")
@@ -213,7 +224,7 @@ def main() -> int:
         print("✅ All checked uploads are fresh. Cache-bust is holding.")
         return 0
     else:
-        print("❌ At least one upload is stale, duplicate, empty or unreadable. If STALE or")
+        print("❌ At least one upload is missing, stale, duplicate, empty or unreadable. If STALE or")
         print("   DUPLICATE, the cache-bust may be regressing — run `poetry run python diagnose_cache.py`.")
         return 1
 

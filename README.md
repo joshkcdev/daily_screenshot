@@ -47,6 +47,10 @@ python sync_raspi_screenshots.py --dry-run  # preview without copying
 
 Prerequisite: a `~/.ssh/config` alias for the Pi (default: `raspi4`). Override with `--host`/`--remote-dir` flags or `RPI_SSH_HOST`/`RPI_REMOTE_DIR` env vars. The sync is incremental and never deletes local files.
 
+### Nightly check and alert
+
+The Pi also runs `alert_on_failure.py` at 02:00 Pacific. It runs `verify_latest_drive.py --max-age-hours 12` and, if that fails, emails the output via Resend. Because it runs off Render, it also catches a Render run that never happened. On top of the variables above, it needs `GOOGLE_DRIVE_FOLDER_ID`, `RESEND_API_KEY`, `ALERT_EMAIL_FROM` and `ALERT_EMAIL_TO` in the same env file, plus the service-account key JSON in `~/.secret/island-utility/`, and `tesseract-ocr` from apt.
+
 ## Drive download (for comparison)
 
 To pull every screenshot the Render app has uploaded to Google Drive into `./drive_screenshots/`:
@@ -74,7 +78,7 @@ poetry run python verify_latest_drive.py            # check the latest upload
 poetry run python verify_latest_drive.py --count 3  # check the latest 3
 ```
 
-Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and compares it to the upload date. ✅ if within 1 day (normal — EC's last forecast issuance can be the prior evening), ❌ if more (the cache bug is back). It also flags ❌ DUPLICATE when a file's Drive md5 matches the upload before it — a byte-identical copy is a cache hit even if the lag looks fine. Exits non-zero on staleness or duplicates so it can be wired into notifications.
+Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and compares it to the upload date. ✅ if within 1 day (normal — EC's last forecast issuance can be the prior evening), ❌ if more (the cache bug is back). It also flags ❌ DUPLICATE when a file's Drive md5 matches the upload before it — a byte-identical copy is a cache hit even if the lag looks fine. `--max-age-hours N` also fails when the newest upload is more than N hours old (a run that never happened). Exits non-zero on any of these so it can be wired into notifications.
 
 ### `diagnose_cache.py` — is it thum.io or upstream?
 
