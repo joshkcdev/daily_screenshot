@@ -1,14 +1,21 @@
 # Daily Weather Screenshot — How It Works
 
-A daily screenshot of the [Canadian weather page](https://weather.gc.ca/en/location/index.html?coords=48.779,-123.702) is automatically captured and uploaded to the `weather_scans` folder on the Island Irrigation shared Google Drive.
+A daily screenshot of the Environment Canada weather page for each location in `locations.py` is automatically captured and uploaded to that location's folder under `Snow Removal/2026-27/Weather Scans` on the IILH shared Google Drive:
+
+| Location | Page | Drive folder | Filename |
+|---|---|---|---|
+| Duncan | [coords=48.779,-123.702](https://weather.gc.ca/en/location/index.html?coords=48.779,-123.702) | `Weather Scans/Duncan` | `weather_duncan_YYYY-MM-DD.png` |
+| Lake Cowichan | [coords=48.825,-124.054](https://weather.gc.ca/en/location/index.html?coords=48.825,-124.054) | `Weather Scans/Lake Cowichan` | `weather_lake_cowichan_YYYY-MM-DD.png` |
+
+Before 2026-10-22, only Duncan was captured, uploaded to the `weather_scans` folder as `weather_daily_Mon_D_YYYY.png`. That folder is kept as the archive.
 
 **Schedule:** Every day at midnight (12:00am PDT / 7:00 UTC)
 
 ## How it works
 
 1. A Render cron job runs `thum.py` daily.
-2. The script uses [thum.io](https://thum.io) to capture a full-page screenshot of the weather page.
-3. The screenshot is uploaded to Google Drive using a Google service account.
+2. The script uses [thum.io](https://thum.io) to capture a full-page screenshot of each location's weather page.
+3. Each screenshot is uploaded to its location's Google Drive folder using a Google service account. If one location fails, the others still run, and the job then exits non-zero.
 
 ### Cache-busting
 
@@ -23,12 +30,15 @@ thum.io keys its render cache off the *source* URL we pass it, not the full thum
 ## Environment variables (set on Render)
 
 - `THUM_AUTH` — thum.io auth key
-- `GOOGLE_DRIVE_FOLDER_ID` — target Google Drive folder ID
+- `GOOGLE_DRIVE_FOLDER_ID_DUNCAN` — Drive folder ID for `Weather Scans/Duncan`
+- `GOOGLE_DRIVE_FOLDER_ID_LAKE_COWICHAN` — Drive folder ID for `Weather Scans/Lake Cowichan`
 - `GOOGLE_SERVICE_ACCOUNT_JSON` — raw JSON of the Google service account key
 
 ## Google Drive
 
-The service account must be shared as an Editor/Content Manager on the target Shared Drive folder.
+The service account must be shared as an Editor/Content Manager on the target Shared Drive folder. It is shared as Content manager on `Weather Scans`, so it can write to both location subfolders.
+
+To add a location, add an entry to `locations.py`, create its subfolder under `Weather Scans`, and set its folder ID variable on Render and the Pi.
 
 ## Deployment
 
@@ -36,7 +46,7 @@ Deployed as a [Render cron job](https://render.com). Pushes to `main` trigger au
 
 ## Backup: raspi4
 
-A parallel instance runs on a Raspberry Pi 4 and saves PNGs to `~/workspace/daily_screenshot/screenshots` on the Pi. It runs this same `thum.py` with `LOCAL_SAVE_DIR` set, which saves the screenshot there and skips Google Drive (the Drive variables aren't needed). The Pi's cron job (00:00 Pacific) loads `THUM_AUTH` and `LOCAL_SAVE_DIR` from `~/.secret/island-utility/daily-screenshot.env`.
+A parallel instance runs on a Raspberry Pi 4 and saves PNGs to `~/workspace/daily_screenshot/screenshots` on the Pi. It runs this same `thum.py` with `LOCAL_SAVE_DIR` set, which saves each location's screenshot there and skips Google Drive (the Drive variables aren't needed). The Pi's cron job (00:00 Pacific) loads `THUM_AUTH` and `LOCAL_SAVE_DIR` from `~/.secret/island-utility/daily-screenshot.env`.
 
 To pull those screenshots down for local comparison:
 
@@ -49,7 +59,7 @@ Prerequisite: a `~/.ssh/config` alias for the Pi (default: `raspi4`). Override w
 
 ### Nightly check and alert
 
-The Pi also runs `alert_on_failure.py` at 02:00 Pacific. It runs `verify_latest_drive.py --max-age-hours 12` and, if that fails, emails the output via Resend. Because it runs off Render, it also catches a Render run that never happened. On top of the variables above, it needs `GOOGLE_DRIVE_FOLDER_ID`, `RESEND_API_KEY`, `ALERT_EMAIL_FROM` and `ALERT_EMAIL_TO` in the same env file, plus the service-account key JSON in `~/.secret/island-utility/`, and `tesseract-ocr` from apt.
+The Pi also runs `alert_on_failure.py` at 02:00 Pacific. It runs `verify_latest_drive.py --location <slug> --max-age-hours 12` for each location and, if any fail, sends one email with all the output via Resend. Because it runs off Render, it also catches a Render run that never happened. On top of the variables above, it needs each location's `GOOGLE_DRIVE_FOLDER_ID_*`, `RESEND_API_KEY`, `ALERT_EMAIL_FROM` and `ALERT_EMAIL_TO` in the same env file, plus the service-account key JSON in `~/.secret/island-utility/`, and `tesseract-ocr` from apt.
 
 ## Drive download (for comparison)
 
@@ -76,7 +86,10 @@ Historically, thum.io served snapshots that lagged the live page by days to week
 ```bash
 poetry run python verify_latest_drive.py            # check the latest upload
 poetry run python verify_latest_drive.py --count 3  # check the latest 3
+poetry run python verify_latest_drive.py --location lake_cowichan  # check one location's folder
 ```
+
+Without `--location` it checks `GOOGLE_DRIVE_FOLDER_ID` (the old `weather_scans` archive).
 
 Pulls the newest Drive upload(s) in memory, OCRs the "Last updated" date, and compares it to the upload date. ✅ if within 1 day (normal — EC's last forecast issuance can be the prior evening), ❌ if more (the cache bug is back). It also flags ❌ DUPLICATE when a file's Drive md5 matches the upload before it — a byte-identical copy is a cache hit even if the lag looks fine. `--max-age-hours N` also fails when the newest upload is more than N hours old (a run that never happened). Exits non-zero on any of these so it can be wired into notifications.
 

@@ -10,7 +10,7 @@ themselves.
 
 ## Unreleased
 
-- No pending application changes.
+- Capture Duncan and Lake Cowichan daily, each to its own `Weather Scans` subfolder as `weather_<location>_YYYY-MM-DD.png` (`locations.py`); the nightly Pi check verifies each folder
 
 ## 2026-10-20
 

@@ -9,16 +9,16 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+from locations import LOCATIONS, Location
+
 SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 THUM_AUTH = os.environ["THUM_AUTH"]
 # When set (the raspi4 backup), save screenshots to this directory and skip
 # Google Drive entirely; the Drive variables are then not required.
 LOCAL_SAVE_DIR = os.environ.get("LOCAL_SAVE_DIR")
-GOOGLE_DRIVE_FOLDER_ID = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
 GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
 
-SCREENSHOT_URL = "https://weather.gc.ca/en/location/index.html?coords=48.779,-123.702"
 SCREENSHOT_ATTEMPTS = 3
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
@@ -80,26 +80,45 @@ def upload_to_google_drive(file_path: str, filename: str, folder_id: str):
     print(f"Uploaded to Google Drive with file ID: {file.get('id')}")
 
 
+def capture(location: Location, current_date: str):
+    filename = f"weather_{location.slug}_{current_date}.png"
+
+    if LOCAL_SAVE_DIR:
+        take_screenshot(location.url, os.path.join(LOCAL_SAVE_DIR, filename))
+        return
+
+    folder_id = os.environ[location.folder_env]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        save_path = os.path.join(tmpdir, filename)
+        take_screenshot(location.url, save_path)
+        upload_to_google_drive(save_path, filename, folder_id)
+
+
 def main():
-    current_date = datetime.now().strftime("%b_%-d_%Y")
-    filename = f"weather_daily_{current_date}.png"
+    current_date = datetime.now().strftime("%Y-%m-%d")
 
     if LOCAL_SAVE_DIR:
         os.makedirs(LOCAL_SAVE_DIR, exist_ok=True)
-        take_screenshot(SCREENSHOT_URL, os.path.join(LOCAL_SAVE_DIR, filename))
-        print("Done.")
-        return
+    else:
+        missing = [l.folder_env for l in LOCATIONS if not os.environ.get(l.folder_env)]
+        if not GOOGLE_SERVICE_ACCOUNT_JSON:
+            missing.append("GOOGLE_SERVICE_ACCOUNT_JSON")
+        if missing:
+            raise RuntimeError(f"Set {', '.join(missing)}, or LOCAL_SAVE_DIR")
 
-    if not (GOOGLE_DRIVE_FOLDER_ID and GOOGLE_SERVICE_ACCOUNT_JSON):
-        raise RuntimeError(
-            "Set GOOGLE_DRIVE_FOLDER_ID and GOOGLE_SERVICE_ACCOUNT_JSON, or LOCAL_SAVE_DIR"
-        )
+    # Capture every location even if one fails, then fail the run so Render
+    # still sends its failure email.
+    failed = []
+    for location in LOCATIONS:
+        print(f"--- {location.name}")
+        try:
+            capture(location, current_date)
+        except Exception as e:
+            print(f"{location.name} failed: {e}")
+            failed.append(location.name)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        save_path = os.path.join(tmpdir, filename)
-        take_screenshot(SCREENSHOT_URL, save_path)
-        upload_to_google_drive(save_path, filename, GOOGLE_DRIVE_FOLDER_ID)
-
+    if failed:
+        raise RuntimeError(f"Capture failed for: {', '.join(failed)}")
     print("Done.")
 
 

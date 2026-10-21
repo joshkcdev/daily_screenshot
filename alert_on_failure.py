@@ -3,10 +3,11 @@
 Run verify_latest_drive.py and email its output via Resend if it fails.
 
 Runs nightly on raspi4, independent of Render, so it also catches a Render
-run that never happened. Any extra arguments are passed to the verifier.
+run that never happened. The verifier runs once per location, and one email
+covers every failure. Any extra arguments are passed to the verifier.
 
-Env: RESEND_API_KEY, ALERT_EMAIL_FROM, ALERT_EMAIL_TO (plus the verifier's
-GOOGLE_DRIVE_FOLDER_ID and service-account key).
+Env: RESEND_API_KEY, ALERT_EMAIL_FROM, ALERT_EMAIL_TO (plus each location's
+GOOGLE_DRIVE_FOLDER_ID_* and the service-account key).
 """
 
 import html
@@ -16,6 +17,8 @@ import subprocess
 import sys
 from pathlib import Path
 from urllib.request import Request, urlopen
+
+from locations import LOCATIONS
 
 
 VERIFIER = Path(__file__).with_name("verify_latest_drive.py")
@@ -47,17 +50,24 @@ def send_email(subject: str, output: str) -> None:
 
 
 def main() -> int:
-    result = subprocess.run(
-        [sys.executable, str(VERIFIER), *sys.argv[1:]],
-        capture_output=True, text=True,
-    )
-    output = result.stdout + result.stderr
-    print(output, end="")
+    outputs = []
+    failed = []
+    for location in LOCATIONS:
+        result = subprocess.run(
+            [sys.executable, str(VERIFIER), "--location", location.slug, *sys.argv[1:]],
+            capture_output=True, text=True,
+        )
+        output = result.stdout + result.stderr
+        print(output)
+        outputs.append(output)
+        if result.returncode != 0:
+            failed.append(location.name)
 
-    if result.returncode != 0:
-        send_email(f"Daily Screenshot check failed (exit {result.returncode})", output)
+    if failed:
+        send_email(f"Daily Screenshot check failed: {', '.join(failed)}", "\n".join(outputs))
         print("Alert email sent.")
-    return result.returncode
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

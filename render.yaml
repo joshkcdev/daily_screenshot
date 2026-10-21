@@ -8,7 +8,9 @@ services:
     envVars:
       - key: THUM_AUTH
         sync: false
-      - key: GOOGLE_DRIVE_FOLDER_ID
+      - key: GOOGLE_DRIVE_FOLDER_ID_DUNCAN
+        sync: false
+      - key: GOOGLE_DRIVE_FOLDER_ID_LAKE_COWICHAN
         sync: false
       - key: GOOGLE_SERVICE_ACCOUNT_JSON
         sync: false

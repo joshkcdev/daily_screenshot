@@ -28,6 +28,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from PIL import Image, UnidentifiedImageError
 
+from locations import LOCATIONS, get_location
+
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 SECRETS_DIR = Path.home() / ".secret" / "island-utility"
@@ -114,11 +116,16 @@ def main() -> int:
         "--max-age-hours", type=float,
         help="Fail if the newest upload is older than this (catches a run that never happened)",
     )
+    parser.add_argument(
+        "--location", choices=[l.slug for l in LOCATIONS],
+        help="Check this location's folder instead of GOOGLE_DRIVE_FOLDER_ID",
+    )
     args = parser.parse_args()
 
-    folder_id = os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
+    folder_env = get_location(args.location).folder_env if args.location else "GOOGLE_DRIVE_FOLDER_ID"
+    folder_id = os.environ.get(folder_env)
     if not folder_id:
-        print(f"⚠️  GOOGLE_DRIVE_FOLDER_ID not set. Put it in {ENV_FILE} or export it.")
+        print(f"⚠️  {folder_env} not set. Put it in {ENV_FILE} or export it.")
         return 2
 
     try:
@@ -127,7 +134,8 @@ def main() -> int:
         print(f"⚠️  {e}")
         return 2
 
-    print("Verify latest Drive uploads — not stale-cached?")
+    title = f" — {get_location(args.location).name}" if args.location else ""
+    print(f"Verify latest Drive uploads{title} — not stale-cached?")
     print("=" * 64)
 
     credentials = service_account.Credentials.from_service_account_file(
