@@ -46,6 +46,10 @@ RE_CAL_COLUMN = re.compile(
     re.IGNORECASE,
 )
 
+# "22 Oct" in the forecast header strip, where Tesseract reads the weekdays
+# and dates as two separate lines.
+RE_DAY_MONTH = re.compile(rf"\b(\d{{1,2}})\s+({MONTHS})", re.IGNORECASE)
+
 
 # weather_<slug>_YYYY-MM-DD.png since 2026-10-21; before that, weather_daily_*
 # (all Duncan — the only location captured then).
@@ -128,7 +132,9 @@ def extract_updated_at(text: str) -> date | None:
         return None
 
 
-def extract_calendar_left(text: str, filename_date: date | None) -> date | None:
+def extract_calendar_left(
+    text: str, filename_date: date | None, pattern: re.Pattern = RE_CAL_COLUMN
+) -> date | None:
     """Earliest weekday/day/month triple after 'Forecast' — the calendar goes
     forward in time, so the leftmost column is the chronologically smallest.
 
@@ -143,8 +149,8 @@ def extract_calendar_left(text: str, filename_date: date | None) -> date | None:
 
     base_year = filename_date.year if filename_date else date.today().year
     candidates: list[date] = []
-    for m in RE_CAL_COLUMN.finditer(search_region):
-        _, day_s, month_s = m.groups()
+    for m in pattern.finditer(search_region):
+        day_s, month_s = m.groups()[-2:]
         month = MONTH_NAMES.get(month_s.lower()[:3])
         if not month:
             continue
@@ -163,6 +169,34 @@ def extract_calendar_left(text: str, filename_date: date | None) -> date | None:
     if not candidates:
         return None
     return min(candidates)
+
+
+def ocr_forecast_strip(img: Image.Image) -> str | None:
+    """OCR just the forecast header row ("Thu 22 Oct … Tue 27 Oct").
+
+    Read as part of the whole page, Tesseract sometimes drops columns whose
+    icons it mistakes for text, so the earliest date it finds isn't the first
+    column. Anchoring on the "Forecast" heading's position and reading only
+    the strip below it, upscaled, gets every column on every layout seen.
+    """
+    region = img.crop((0, 0, img.width, min(1400, img.height)))
+    try:
+        data = pytesseract.image_to_data(region, output_type=pytesseract.Output.DICT)
+    except Exception as e:
+        print(f"  ⚠️  OCR error: {e}")
+        return None
+    # Case-sensitive exact match: the breadcrumb's "forecasts" doesn't count.
+    headings = [i for i, word in enumerate(data["text"]) if word == "Forecast"]
+    if not headings:
+        return None
+    bottom = data["top"][headings[0]] + data["height"][headings[0]]
+    strip = img.crop((0, bottom + 10, img.width, min(bottom + 100, img.height)))
+    strip = strip.resize((strip.width * 2, strip.height * 2))
+    try:
+        return pytesseract.image_to_string(strip, config="--psm 6")
+    except Exception as e:
+        print(f"  ⚠️  OCR error: {e}")
+        return None
 
 
 def classify(row_filename_date, updated_at, calendar_left) -> str:
@@ -194,7 +228,10 @@ def process_image(path: Path) -> Row:
     region = img.crop((0, 0, img.width, min(1000, img.height)))
     text = ocr_text(region)
     updated_at = extract_updated_at(text)
-    cal_left = extract_calendar_left(text, filename_date)
+    strip = ocr_forecast_strip(img)
+    cal_left = extract_calendar_left(strip, filename_date, RE_DAY_MONTH) if strip else None
+    if cal_left is None:
+        cal_left = extract_calendar_left(text, filename_date)
 
     status = classify(filename_date, updated_at, cal_left)
     return Row(path.name, filename_date, updated_at, cal_left, status)
