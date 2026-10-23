@@ -12,6 +12,8 @@ themselves.
 
 ## 2026-10-23
 
+- `4c9ac68` — Add health_check.py and the /screenshot-health skill
+- `edecee7` — Parse weather_daily_YYYY_month_DD names in check_cache_coherence.py
 - `eb8e271` — Read the forecast header strip in check_cache_coherence.py
 - `8006190` — Teach check_cache_coherence.py the per-location filenames
 
