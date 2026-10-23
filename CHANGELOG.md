@@ -12,6 +12,7 @@ themselves.
 
 ## 2026-10-23
 
+- `eb8e271` — Read the forecast header strip in check_cache_coherence.py
 - `8006190` — Teach check_cache_coherence.py the per-location filenames
 
 ## 2026-10-21
