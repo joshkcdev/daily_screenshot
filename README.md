@@ -106,7 +106,10 @@ Fetches the EC weather page's raw HTML and a fresh thum.io capture at the same i
 ```bash
 poetry run python check_cache_coherence.py            # last 30 in each dir
 poetry run python check_cache_coherence.py --count 5  # quick spot-check
+poetry run python check_cache_coherence.py --location lake_cowichan  # one location only
 ```
+
+Reads both the per-location names (`weather_<location>_YYYY-MM-DD.png`) and the older `weather_daily_*` names, which count as `duncan`. Without `--location`, the newest files from every location are mixed in one table.
 
 Uses local Tesseract OCR (`brew install tesseract`) to extract the "Last updated" date and the leftmost forecast-calendar date from each image in `./raspi_screenshots/` and `./drive_screenshots/`. Status per row:
 

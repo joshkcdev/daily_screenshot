@@ -20,6 +20,8 @@ from pathlib import Path
 import pytesseract
 from PIL import Image
 
+from locations import LOCATIONS
+
 
 MONTH_NAMES = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
@@ -45,6 +47,13 @@ RE_CAL_COLUMN = re.compile(
 )
 
 
+# weather_<slug>_YYYY-MM-DD.png since 2026-10-21; before that, weather_daily_*
+# (all Duncan — the only location captured then).
+SLUG_ALTERNATION = "|".join(re.escape(l.slug) for l in LOCATIONS)
+RE_LOCATION_NAME = re.compile(rf"weather_({SLUG_ALTERNATION})_(\d{{4}})-(\d{{2}})-(\d{{2}})")
+LEGACY_LOCATION = "duncan"
+
+
 @dataclass
 class Row:
     filename: str
@@ -54,7 +63,24 @@ class Row:
     status: str  # "OK" | "STALE" | "MISMATCH" | "OCR_FAILED"
 
 
+def parse_capture_location(name: str) -> str | None:
+    m = RE_LOCATION_NAME.search(name)
+    if m:
+        return m.group(1)
+    if "weather_daily_" in name:
+        return LEGACY_LOCATION
+    return None
+
+
 def parse_capture_date(name: str) -> date | None:
+    # Per-location: weather_duncan_2026-10-22.png / weather_lake_cowichan_2026-10-22.png
+    m = RE_LOCATION_NAME.search(name)
+    if m:
+        try:
+            return date(int(m.group(2)), int(m.group(3)), int(m.group(4)))
+        except ValueError:
+            return None
+
     # ISO with optional time: weather_daily_2026-05-14_... or weather_daily_2026_05_14_...
     m = re.search(r"weather_daily_(\d{4})[-_](\d{2})[-_](\d{2})", name)
     if m:
@@ -174,7 +200,7 @@ def process_image(path: Path) -> Row:
     return Row(path.name, filename_date, updated_at, cal_left, status)
 
 
-def collect_recent(dir_path: Path, count: int) -> list[Path]:
+def collect_recent(dir_path: Path, count: int, location: str | None) -> list[Path]:
     if not dir_path.exists():
         print(f"⚠️  Directory not found: {dir_path}")
         return []
@@ -187,6 +213,8 @@ def collect_recent(dir_path: Path, count: int) -> list[Path]:
         d = parse_capture_date(p.name)
         if d is None:
             unparseable += 1
+            continue
+        if location and parse_capture_location(p.name) != location:
             continue
         pairs.append((d, p))
 
@@ -250,6 +278,10 @@ def main() -> int:
     parser.add_argument("--count", type=int, default=30, help="Files per directory (default: 30)")
     parser.add_argument("--raspi-dir", default="raspi_screenshots")
     parser.add_argument("--drive-dir", default="drive_screenshots")
+    parser.add_argument(
+        "--location", choices=[l.slug for l in LOCATIONS],
+        help="Only this location's files (legacy weather_daily_* files count as duncan)",
+    )
     args = parser.parse_args()
 
     print("Cache Coherence Check")
@@ -261,7 +293,7 @@ def main() -> int:
 
     for label, dir_arg in [("raspi_screenshots/", args.raspi_dir), ("drive_screenshots/", args.drive_dir)]:
         dir_path = Path(dir_arg)
-        files = collect_recent(dir_path, args.count)
+        files = collect_recent(dir_path, args.count, args.location)
         if not files:
             print(f"\n{label} — no files")
             continue
