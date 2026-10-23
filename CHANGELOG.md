@@ -10,6 +10,10 @@ themselves.
 
 ## Unreleased
 
+## 2026-10-23
+
+- `8006190` — Teach check_cache_coherence.py the per-location filenames
+
 ## 2026-10-21
 
 - `e6fea98` — Capture Duncan and Lake Cowichan into separate Weather Scans folders
