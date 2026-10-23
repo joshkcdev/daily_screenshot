@@ -93,6 +93,16 @@ def parse_capture_date(name: str) -> date | None:
         except ValueError:
             return None
 
+    # Year first, month spelled out: weather_daily_2025_october_01.png
+    m = re.search(r"weather_daily_(\d{4})_([A-Za-z]+)_(\d{1,2})\b", name)
+    if m:
+        month = MONTH_NAMES.get(m.group(2).lower())
+        if month:
+            try:
+                return date(int(m.group(1)), month, int(m.group(3)))
+            except ValueError:
+                return None
+
     # Human-readable: weather_daily_May 14 2026.jpg / May_14_2026 / May 14, 2026 / may_14_2026
     m = re.search(
         r"weather_daily_([A-Za-z]+)[_ ](\d{1,2}),?[_ ](\d{4})",
