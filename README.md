@@ -61,6 +61,15 @@ Prerequisite: a `~/.ssh/config` alias for the Pi (default: `raspi4`). Override w
 
 The Pi also runs `alert_on_failure.py` at 02:00 Pacific. It runs `verify_latest_drive.py --location <slug> --max-age-hours 12` for each location and, if any fail, sends one email with all the output via Resend. Because it runs off Render, it also catches a Render run that never happened. On top of the variables above, it needs each location's `GOOGLE_DRIVE_FOLDER_ID_*`, `RESEND_API_KEY`, `ALERT_EMAIL_FROM` and `ALERT_EMAIL_TO` in the same env file, plus the service-account key JSON in `~/.secret/island-utility/`, and `tesseract-ocr` from apt.
 
+### Health check: Pi vs Drive
+
+```bash
+poetry run python health_check.py             # last 90 days
+poetry run python health_check.py --days 365
+```
+
+Run from the Mac. For each location it lists the Pi's captures over SSH and the Drive folders with the service account (Duncan also includes the old `weather_scans` archive). It then reports days missing on both, on Drive only (the Pi copy might fill the gap) or on the Pi only, plus empty files and byte-identical repeats of the previous day. Exits 1 if anything is found. In Claude Code, the `/screenshot-health` skill runs it, checks the Pi's cron and verify logs, and separates new problems from the gaps already recorded in the vault.
+
 ## Drive download (for comparison)
 
 To pull every screenshot the Render app has uploaded to Google Drive into `./drive_screenshots/`:
